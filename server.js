@@ -1,4 +1,3 @@
-// filepath: d:\webOS\cosmic-web-desktop\email_api\server.js
 const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
@@ -9,41 +8,51 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// 🔧 TRUST PROXY - Fix for Vercel deployment
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(helmet());
 app.use(cors({
   origin: [
-    'http://localhost:5173',     // Vite dev server
-    'http://localhost:3000',     // React dev server  
-    'http://localhost:8080',     // Your current dev server
-    'http://127.0.0.1:8080',     // Alternative localhost
-    'https://yourdomain.com',    // Production domain
-    'https://*.vercel.app',      // Vercel deployments
-    '*'                          // Allow all origins (for development only)
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+    'https://yourdomain.com',
+    'https://*.vercel.app',
+    '*'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
 }));
 
-// Add explicit preflight handling
 app.options('*', cors());
-
 app.use(express.json({ limit: '10mb' }));
 
-// Rate limiting
+// 🔧 UPDATED RATE LIMITING - Fixed for production
 const emailLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  max: 10, // Increased from 5 to 10 for better UX
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Custom key generator that works with Vercel
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress || 'unknown';
+  },
   message: {
-    error: 'Too many email requests, please try again later.',
+    success: false,
+    error: 'Too many email requests from this IP, please try again later.',
     retryAfter: '15 minutes'
-  }
+  },
+  // Skip rate limiting in development
+  skip: (req) => process.env.NODE_ENV === 'development'
 });
 
-// Create SMTP transporter
+// 🔧 FIXED: Create SMTP transporter (removed 'er' from createTransporter)
 const createTransporter = () => {
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT),
     secure: process.env.SMTP_SECURE === 'true',
@@ -57,14 +66,38 @@ const createTransporter = () => {
   });
 };
 
-// 🚀 STARTUP TEST EMAIL FUNCTION
+// 🔧 ENHANCED API KEY VERIFICATION
+const verifyApiKey = (req, res, next) => {
+  const apiKey = req.headers['x-api-key'] || req.body.apiKey || req.query.apiKey;
+  
+  console.log('Received API Key:', apiKey ? `${apiKey.substring(0, 8)}...` : 'None');
+  console.log('Expected API Key:', process.env.API_KEY ? `${process.env.API_KEY.substring(0, 8)}...` : 'Not Set');
+  
+  if (!apiKey) {
+    return res.status(401).json({
+      success: false,
+      error: 'API key is required',
+      hint: 'Include X-API-Key header in your request'
+    });
+  }
+  
+  if (apiKey !== process.env.API_KEY) {
+    return res.status(403).json({
+      success: false,
+      error: 'Invalid API key',
+      received: apiKey ? `${apiKey.substring(0, 8)}...` : 'None'
+    });
+  }
+  
+  next();
+};
+
+// Startup test email function
 const sendStartupTestEmail = async () => {
   try {
     console.log('📧 Sending startup test email...');
     
     const transporter = createTransporter();
-    
-    // Verify connection first
     await transporter.verify();
     console.log('✅ SMTP connection verified successfully');
 
@@ -169,6 +202,11 @@ const sendStartupTestEmail = async () => {
               </div>
               
               <div class="info-item">
+                <strong>🔑 API Key Status:</strong>
+                ${process.env.API_KEY ? '✅ Configured' : '❌ Missing'}
+              </div>
+              
+              <div class="info-item">
                 <strong>📧 SMTP Host:</strong>
                 ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}
               </div>
@@ -182,22 +220,6 @@ const sendStartupTestEmail = async () => {
                 <strong>📨 Default Recipient:</strong>
                 ${process.env.DEFAULT_TO_EMAIL}
               </div>
-              
-              <div class="info-item">
-                <strong>🔧 Available Endpoints:</strong>
-                <ul style="margin: 5px 0; padding-left: 20px;">
-                  <li>GET / - Health check</li>
-                  <li>POST /api/contact-form - Contact form submission</li>
-                  <li>POST /api/send-email - Generic email sending</li>
-                </ul>
-              </div>
-            </div>
-            
-            <div style="background: #eff6ff; padding: 20px; border-radius: 10px; margin-top: 20px; border-left: 4px solid #3b82f6;">
-              <strong style="color: #1e40af;">💡 Test Message:</strong>
-              <p style="margin: 10px 0 0 0; color: #1e3a8a;">
-                This automated email confirms that your email API service is working correctly and can send emails successfully. All systems are operational! 🎉
-              </p>
             </div>
           </div>
           
@@ -214,65 +236,19 @@ const sendStartupTestEmail = async () => {
       from: `"${process.env.DEFAULT_FROM_NAME} - API Server" <${process.env.DEFAULT_FROM_EMAIL}>`,
       to: process.env.DEFAULT_TO_EMAIL,
       subject: `🚀 Email API Server Started - ${environment.toUpperCase()} (${startupTime})`,
-      html: testEmailTemplate,
-      text: `
-        EMAIL API SERVER STARTUP NOTIFICATION
-        
-        ✅ Server Status: ONLINE
-        🕐 Startup Time: ${startupTime}
-        🌍 Environment: ${environment.toUpperCase()}
-        📧 SMTP Host: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}
-        👤 From Email: ${process.env.DEFAULT_FROM_EMAIL}
-        📨 Default Recipient: ${process.env.DEFAULT_TO_EMAIL}
-        
-        Available Endpoints:
-        - GET / - Health check
-        - POST /api/contact-form - Contact form submission
-        - POST /api/send-email - Generic email sending
-        
-        This automated email confirms that your email API service is working correctly and can send emails successfully. All systems are operational!
-        
-        Server Version: 1.0.0
-        Generated at ${startupTime}
-      `
+      html: testEmailTemplate
     };
 
     const info = await transporter.sendMail(mailOptions);
     console.log(`✅ Startup test email sent successfully!`);
     console.log(`📬 Message ID: ${info.messageId}`);
-    console.log(`📧 Sent to: ${process.env.DEFAULT_TO_EMAIL}`);
     
   } catch (error) {
     console.error('❌ Failed to send startup test email:', error.message);
-    console.error('⚠️  Email service may not be configured correctly');
-    
-    // Don't fail the server startup if test email fails
-    // This allows the server to still function even if email is misconfigured
   }
 };
 
-// Middleware to verify API key
-const verifyApiKey = (req, res, next) => {
-  const apiKey = req.headers['x-api-key'] || req.body.apiKey;
-  
-  if (!apiKey) {
-    return res.status(401).json({
-      success: false,
-      error: 'API key is required'
-    });
-  }
-  
-  if (apiKey !== process.env.API_KEY) {
-    return res.status(403).json({
-      success: false,
-      error: 'Invalid API key'
-    });
-  }
-  
-  next();
-};
-
-// Health check endpoint (enhanced with startup status)
+// Health check endpoints
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -280,10 +256,11 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development',
+    apiKeyConfigured: !!process.env.API_KEY,
     features: {
       'contact-form': '/api/contact-form',
       'generic-email': '/api/send-email',
-      'startup-test': 'enabled'
+      'test-email': '/api/test-email'
     }
   });
 });
@@ -293,11 +270,12 @@ app.get('/health', (req, res) => {
     success: true,
     message: 'Email API Server is healthy',
     timestamp: new Date().toISOString(),
-    smtp_configured: !!(process.env.SMTP_USER && process.env.SMTP_PASS)
+    smtp_configured: !!(process.env.SMTP_USER && process.env.SMTP_PASS),
+    api_key_configured: !!process.env.API_KEY
   });
 });
 
-// 🧪 Manual test email endpoint (protected by API key)
+// 🧪 Manual test email endpoint
 app.post('/api/test-email', verifyApiKey, async (req, res) => {
   try {
     await sendStartupTestEmail();
@@ -315,7 +293,7 @@ app.post('/api/test-email', verifyApiKey, async (req, res) => {
   }
 });
 
-// Contact form specific endpoint
+// Contact form endpoint
 app.post('/api/contact-form', emailLimiter, verifyApiKey, async (req, res) => {
   try {
     const { name, email, subject, message } = req.body;
@@ -470,68 +448,6 @@ app.post('/api/contact-form', emailLimiter, verifyApiKey, async (req, res) => {
   }
 });
 
-// Generic email endpoint
-app.post('/api/send-email', emailLimiter, verifyApiKey, async (req, res) => {
-  try {
-    const {
-      to,
-      subject,
-      content,
-      from,
-      fromName,
-      replyTo,
-      isHtml = true
-    } = req.body;
-
-    if (!to || !subject || !content) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields: to, subject, content'
-      });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(to)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid email address'
-      });
-    }
-
-    const transporter = createTransporter();
-    await transporter.verify();
-
-    const mailOptions = {
-      from: fromName ? `"${fromName}" <${from || process.env.DEFAULT_FROM_EMAIL}>` : from || process.env.DEFAULT_FROM_EMAIL,
-      to: to,
-      replyTo: replyTo || from || process.env.DEFAULT_FROM_EMAIL,
-      subject: subject,
-      [isHtml ? 'html' : 'text']: content,
-      ...(isHtml && {
-        text: content.replace(/<[^>]*>/g, '')
-      })
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-
-    res.json({
-      success: true,
-      message: 'Email sent successfully',
-      messageId: info.messageId,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('Email sending error:', error);
-
-    res.status(500).json({
-      success: false,
-      error: 'Failed to send email',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
 // Error handling
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
@@ -548,13 +464,16 @@ app.use('*', (req, res) => {
   });
 });
 
-// 🚀 SERVER INITIALIZATION WITH STARTUP TEST EMAIL
+// Server initialization
 const initializeServer = async () => {
   try {
     console.log('🚀 Starting Email API Server...');
+    console.log('🔑 API Key configured:', !!process.env.API_KEY);
     
-    // Send startup test email
-    await sendStartupTestEmail();
+    // Send startup test email (only in production)
+    if (process.env.NODE_ENV === 'production') {
+      await sendStartupTestEmail();
+    }
     
     console.log('✅ Server initialization complete!');
   } catch (error) {
@@ -565,17 +484,16 @@ const initializeServer = async () => {
 // Export for Vercel
 module.exports = app;
 
-// Only listen if not in Vercel environment
+// Local development
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, async () => {
     console.log(`🚀 Email API Server running on port ${PORT}`);
     console.log(`📧 SMTP configured for: ${process.env.SMTP_USER}`);
     console.log(`🔑 API Key authentication enabled`);
     
-    // Initialize with startup email
     await initializeServer();
   });
 } else {
-  // For Vercel deployment, send startup email when module loads
+  // Vercel serverless initialization
   initializeServer();
 }
