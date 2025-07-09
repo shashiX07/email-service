@@ -1,3 +1,4 @@
+// filepath: d:\webOS\cosmic-web-desktop\email_api\server.js
 const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
@@ -11,7 +12,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://yourdomain.com'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://yourdomain.com', 'https://*.vercel.app'],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -64,83 +65,25 @@ const verifyApiKey = (req, res, next) => {
 };
 
 // Health check endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Email API Server is running on Vercel',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
+});
+
 app.get('/health', (req, res) => {
   res.json({
     success: true,
-    message: 'Email API Server is running',
+    message: 'Email API Server is healthy',
     timestamp: new Date().toISOString()
   });
 });
 
-// Main email sending endpoint
-app.post('/send-email', emailLimiter, verifyApiKey, async (req, res) => {
-  try {
-    const {
-      to,
-      subject,
-      content,
-      from,
-      fromName,
-      replyTo,
-      isHtml = true
-    } = req.body;
-
-    // Validation
-    if (!to || !subject || !content) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields: to, subject, content'
-      });
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(to)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid email address'
-      });
-    }
-
-    const transporter = createTransporter();
-
-    // Verify transporter
-    await transporter.verify();
-
-    const mailOptions = {
-      from: fromName ? `"${fromName}" <${from || process.env.DEFAULT_FROM_EMAIL}>` : from || process.env.DEFAULT_FROM_EMAIL,
-      to: to,
-      replyTo: replyTo || from || process.env.DEFAULT_FROM_EMAIL,
-      subject: subject,
-      [isHtml ? 'html' : 'text']: content,
-      // Add both HTML and text versions for better compatibility
-      ...(isHtml && {
-        text: content.replace(/<[^>]*>/g, '') // Strip HTML for text version
-      })
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-
-    res.json({
-      success: true,
-      message: 'Email sent successfully',
-      messageId: info.messageId,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('Email sending error:', error);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Failed to send email',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
 // Contact form specific endpoint
-app.post('/contact-form', emailLimiter, verifyApiKey, async (req, res) => {
+app.post('/api/contact-form', emailLimiter, verifyApiKey, async (req, res) => {
   try {
     const { name, email, subject, message } = req.body;
 
@@ -294,7 +237,69 @@ app.post('/contact-form', emailLimiter, verifyApiKey, async (req, res) => {
   }
 });
 
-// Error handling middleware
+// Generic email endpoint
+app.post('/api/send-email', emailLimiter, verifyApiKey, async (req, res) => {
+  try {
+    const {
+      to,
+      subject,
+      content,
+      from,
+      fromName,
+      replyTo,
+      isHtml = true
+    } = req.body;
+
+    if (!to || !subject || !content) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: to, subject, content'
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(to)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid email address'
+      });
+    }
+
+    const transporter = createTransporter();
+    await transporter.verify();
+
+    const mailOptions = {
+      from: fromName ? `"${fromName}" <${from || process.env.DEFAULT_FROM_EMAIL}>` : from || process.env.DEFAULT_FROM_EMAIL,
+      to: to,
+      replyTo: replyTo || from || process.env.DEFAULT_FROM_EMAIL,
+      subject: subject,
+      [isHtml ? 'html' : 'text']: content,
+      ...(isHtml && {
+        text: content.replace(/<[^>]*>/g, '')
+      })
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+
+    res.json({
+      success: true,
+      message: 'Email sent successfully',
+      messageId: info.messageId,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Email sending error:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send email',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Error handling
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({
@@ -303,7 +308,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -311,11 +315,12 @@ app.use('*', (req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Email API Server running on port ${PORT}`);
-  console.log(`📧 SMTP configured for: ${process.env.SMTP_USER}`);
-  console.log(`🔑 API Key authentication enabled`);
-});
-
+// Export for Vercel
 module.exports = app;
+
+// Only listen if not in Vercel
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Email API Server running on port ${PORT}`);
+  });
+}
