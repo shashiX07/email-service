@@ -25,20 +25,18 @@ app.use(express.json({ limit: '12mb' }));
 
 // 🔧 UPDATED RATE LIMITING - Fixed for production
 const emailLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Increased from 5 to 10 for better UX
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 10, // 10 requests per window per IP
   standardHeaders: true,
   legacyHeaders: false,
-  // Custom key generator that works with Vercel
   keyGenerator: (req) => {
     return req.ip || req.connection.remoteAddress || 'unknown';
   },
   message: {
     success: false,
     error: 'Too many email requests from this IP, please try again later.',
-    retryAfter: '15 minutes'
+    retryAfter: '10 minutes'
   },
-  // Skip rate limiting in development
   skip: (req) => process.env.NODE_ENV === 'development'
 });
 
@@ -82,162 +80,6 @@ const verifyApiKey = (req, res, next) => {
   }
   
   next();
-};
-
-// Startup test email function
-const sendStartupTestEmail = async () => {
-  try {
-    console.log('📧 Sending startup test email...');
-    
-    const transporter = createTransporter();
-    await transporter.verify();
-    console.log('✅ SMTP connection verified successfully');
-
-    const startupTime = new Date().toLocaleString();
-    const environment = process.env.NODE_ENV || 'development';
-    
-    const testEmailTemplate = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Email API Server Started</title>
-        <style>
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .container {
-            background: #ffffff;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border: 2px solid #10b981;
-          }
-          .header {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-          }
-          .header h1 {
-            margin: 0;
-            font-size: 24px;
-          }
-          .content {
-            padding: 30px;
-          }
-          .status-badge {
-            display: inline-block;
-            background: #10b981;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-bottom: 20px;
-          }
-          .info-grid {
-            display: grid;
-            gap: 15px;
-            margin: 20px 0;
-          }
-          .info-item {
-            padding: 15px;
-            background: #f0fdf4;
-            border-radius: 8px;
-            border-left: 4px solid #10b981;
-          }
-          .info-item strong {
-            color: #065f46;
-            display: block;
-            margin-bottom: 5px;
-          }
-          .footer {
-            background: #f9fafb;
-            padding: 20px;
-            text-align: center;
-            color: #6b7280;
-            font-size: 14px;
-          }
-          .success-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="success-icon">🚀</div>
-            <h1>Email API Server Started Successfully!</h1>
-            <p>Your email service is now running and ready to handle requests</p>
-          </div>
-          
-          <div class="content">
-            <div class="status-badge">✅ SERVICE ONLINE</div>
-            
-            <div class="info-grid">
-              <div class="info-item">
-                <strong>🕐 Startup Time:</strong>
-                ${startupTime}
-              </div>
-              
-              <div class="info-item">
-                <strong>🌍 Environment:</strong>
-                ${environment.toUpperCase()}
-              </div>
-              
-              <div class="info-item">
-                <strong>🔑 API Key Status:</strong>
-                ${process.env.API_KEY ? '✅ Configured' : '❌ Missing'}
-              </div>
-              
-              <div class="info-item">
-                <strong>📧 SMTP Host:</strong>
-                ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}
-              </div>
-              
-              <div class="info-item">
-                <strong>👤 From Email:</strong>
-                ${process.env.DEFAULT_FROM_EMAIL}
-              </div>
-              
-              <div class="info-item">
-                <strong>📨 Default Recipient:</strong>
-                ${process.env.DEFAULT_TO_EMAIL}
-              </div>
-            </div>
-          </div>
-          
-          <div class="footer">
-            <p>This is an automated startup notification from your Email API Server</p>
-            <p>Server Version: 1.0.0 | Generated at ${startupTime}</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const mailOptions = {
-      from: `"${process.env.DEFAULT_FROM_NAME} - API Server" <${process.env.DEFAULT_FROM_EMAIL}>`,
-      to: process.env.DEFAULT_TO_EMAIL,
-      subject: `🚀 Email API Server Started - ${environment.toUpperCase()} (${startupTime})`,
-      html: testEmailTemplate
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Startup test email sent successfully!`);
-    console.log(`📬 Message ID: ${info.messageId}`);
-    
-  } catch (error) {
-    console.error('❌ Failed to send startup test email:', error.message);
-  }
 };
 
 // Health check endpoints
