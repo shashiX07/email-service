@@ -127,6 +127,58 @@ app.post('/api/test-email', verifyApiKey, async (req, res) => {
   }
 });
 
+// Generic email sending endpoint
+app.post('/api/send-email', emailLimiter, verifyApiKey, async (req, res) => {
+  try {
+    const { to, subject, content, from, fromName, replyTo, isHtml } = req.body;
+
+    if (!to || !subject || !content) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: to, subject, content'
+      });
+    }
+
+    const transporter = createTransporter();
+    await transporter.verify();
+
+    const fromAddress = from
+      ? (fromName ? `"${fromName}" <${from}>` : from)
+      : `"${process.env.DEFAULT_FROM_NAME}" <${process.env.DEFAULT_FROM_EMAIL}>`;
+
+    const mailOptions = {
+      from: fromAddress,
+      to,
+      subject,
+      replyTo: replyTo || undefined,
+    };
+
+    if (isHtml === undefined || isHtml === true) {
+      mailOptions.html = content;
+      // generate a plaintext fallback by stripping simple tags for safety
+      mailOptions.text = content.replace(/<[^>]+>/g, '');
+    } else {
+      mailOptions.text = content;
+    }
+
+    const info = await transporter.sendMail(mailOptions);
+
+    res.json({
+      success: true,
+      message: 'Email sent successfully',
+      messageId: info.messageId,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('/api/send-email error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send email',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 // Contact form endpoint
 app.post('/api/contact-form', emailLimiter, verifyApiKey, async (req, res) => {
   try {
