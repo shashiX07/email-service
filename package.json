@@ -1,8 +1,9 @@
 {
   "name": "email-api-server",
   "version": "1.0.0",
-  "description": "SMTP Email API Server",
+  "description": "SMTP Email API Server with Web Dashboard",
   "main": "server.js",
+  "homepage": "public/index.html",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email API Service - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-envelope-circle-check"></i>
+                <h1>Email API Service</h1>
+            </div>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Checking...</span>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="dashboard">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </button>
+            <button class="tab-btn" data-tab="config">
+                <i class="fas fa-cog"></i> Configuration
+            </button>
+            <button class="tab-btn" data-tab="send">
+                <i class="fas fa-paper-plane"></i> Send Email
+            </button>
+            <button class="tab-btn" data-tab="bulk">
+                <i class="fas fa-paper-plane"></i> Bulk Email
+            </button>
+            <button class="tab-btn" data-tab="signature">
+                <i class="fas fa-signature"></i> Signature
+            </button>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <div class="tab-content active" id="dashboard">
+            <div class="welcome-banner">
+                <h2>Welcome to Your Email API Service</h2>
+                <p>Manage your email service configuration, send emails, and monitor your API health</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="fas fa-server"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Server Status</h3>
+                        <p id="serverStatus">Checking...</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>API Key</h3>
+                        <p id="apiKeyStatus">Not Configured</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>SMTP Status</h3>
+                        <p id="smtpStatus">Unknown</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon orange">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Last Updated</h3>
+                        <p id="lastUpdated">Just now</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-cards">
+                <div class="info-card">
+                    <h3><i class="fas fa-info-circle"></i> Quick Start</h3>
+                    <ol>
+                        <li>Configure your API key and SMTP settings in the <strong>Configuration</strong> tab</li>
+                        <li>Test your configuration using the <strong>Test API</strong> tab</li>
+                        <li>Start sending emails via the <strong>Send Email</strong> tab</li>
+                    </ol>
+                </div>
+
+                <div class="info-card">
+                    <h3><i class="fas fa-book"></i> API Endpoints</h3>
+                    <ul class="endpoint-list">
+                        <li><code>GET /health</code> - Health check endpoint</li>
+                        <li><code>POST /api/send-email</code> - Send generic email</li>
+                        <li><code>POST /api/contact-form</code> - Contact form submission</li>
+                        <li><code>POST /api/test-email</code> - Send test email</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div class="tab-content" id="config">
+            <div class="section">
+                <h2><i class="fas fa-cog"></i> Configuration Settings</h2>
+                <p class="subtitle">Configure your API credentials and SMTP settings. These are stored locally in your browser.</p>
+
+                <div class="config-section">
+                    <h3><i class="fas fa-shield-alt"></i> API Authentication</h3>
+                    <div class="form-group">
+                        <label for="apiKey">
+                            <i class="fas fa-key"></i> API Key
+                            <span class="required">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="password" id="apiKey" placeholder="Enter your API key">
+                            <button class="btn-icon" id="toggleApiKey" title="Show/Hide API Key">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <small>This key is required to authenticate API requests</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="apiEndpoint">
+                            <i class="fas fa-link"></i> API Endpoint
+                        </label>
+                        <input type="url" id="apiEndpoint" placeholder="https://your-api.vercel.app" value="">
+                        <small>Your deployed API URL (leave empty for local development)</small>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3><i class="fas fa-server"></i> SMTP Configuration</h3>
+                    
+                    <div class="form-group">
+                        <label for="smtpProvider">
+                            <i class="fas fa-envelope"></i> Email Provider
+                        </label>
+                        <select id="smtpProvider">
+                            <option value="custom">Custom SMTP</option>
+                            <option value="gmail">Gmail</option>
+                            <option value="outlook">Outlook</option>
+                            <option value="yahoo">Yahoo Mail</option>
+                            <option value="zoho">Zoho Mail</option>
+                        </select>
+                        <small>Select your email provider or use custom SMTP settings</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="smtpHost">
+                                <i class="fas fa-server"></i> SMTP Host
+                            </label>
+                            <input type="text" id="smtpHost" placeholder="smtp.gmail.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="smtpPort">
+                                <i class="fas fa-network-wired"></i> SMTP Port
+                            </label>
+                            <input type="number" id="smtpPort" placeholder="587">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="smtpSecure">
+                                <span>Use SSL/TLS (Enable for port 465)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="smtpUser">
+                                <i class="fas fa-user"></i> SMTP Username/Email
+                                <span class="required">*</span>
+                            </label>
+                            <input type="email" id="smtpUser" placeholder="your-email@gmail.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="smtpPass">
+                                <i class="fas fa-lock"></i> SMTP Password
+                                <span class="required">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" id="smtpPass" placeholder="Your password or app password">
+                                <button class="btn-icon" id="toggleSmtpPass" type="button" title="Show/Hide Password">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <small>For Gmail, use App Password. For others, use your email password.</small>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-info" id="testSmtpConnection" type="button">
+                            <i class="fas fa-vial"></i> Test SMTP Connection
+                        </button>
+                        <button class="btn btn-primary" id="saveSmtpConfig" type="button">
+                            <i class="fas fa-save"></i> Save SMTP Config
+                        </button>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3><i class="fas fa-envelope-open-text"></i> Email Configuration</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="defaultFromEmail">
+                                <i class="fas fa-at"></i> From Email
+                            </label>
+                            <input type="email" id="defaultFromEmail" placeholder="sender@example.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="defaultFromName">
+                                <i class="fas fa-user"></i> From Name
+                            </label>
+                            <input type="text" id="defaultFromName" placeholder="Your Name">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="defaultToEmail">
+                            <i class="fas fa-inbox"></i> Default Recipient Email
+                        </label>
+                        <input type="email" id="defaultToEmail" placeholder="recipient@example.com">
+                        <small>Default email address to receive contact form submissions</small>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="saveConfig">
+                        <i class="fas fa-save"></i> Save Configuration
+                    </button>
+                    <button class="btn btn-secondary" id="clearConfig">
+                        <i class="fas fa-trash"></i> Clear All
+                    </button>
+                    <button class="btn btn-info" id="testConnection">
+                        <i class="fas fa-plug"></i> Test Connection
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Send Email Tab -->
+        <div class="tab-content" id="send">
+            <div class="section">
+                <h2><i class="fas fa-paper-plane"></i> Send Email</h2>
+                <p class="subtitle">Send a custom email using your configured SMTP settings</p>
+
+                <form id="sendEmailForm">
+                    <div class="form-group">
+                        <label for="emailTo">
+                            <i class="fas fa-user-circle"></i> To
+                            <span class="required">*</span>
+                        </label>
+                        <input type="email" id="emailTo" placeholder="recipient@example.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="emailSubject">
+                            <i class="fas fa-heading"></i> Subject
+                            <span class="required">*</span>
+                        </label>
+                        <input type="text" id="emailSubject" placeholder="Email subject" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="emailFromCustom">
+                                <i class="fas fa-at"></i> From Email (Optional)
+                            </label>
+                            <input type="email" id="emailFromCustom" placeholder="Use default if empty">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="emailFromName">
+                                <i class="fas fa-signature"></i> From Name (Optional)
+                            </label>
+                            <input type="text" id="emailFromName" placeholder="Use default if empty">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="emailReplyTo">
+                            <i class="fas fa-reply"></i> Reply-To (Optional)
+                        </label>
+                        <input type="email" id="emailReplyTo" placeholder="reply@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="emailContent">
+                            <i class="fas fa-file-alt"></i> Content
+                            <span class="required">*</span>
+                        </label>
+                        <textarea id="emailContent" rows="8" placeholder="Email content (HTML supported)" required></textarea>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="isHtml" checked>
+                                <span>Content is HTML</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="includeSignature">
+                                <span>Include Signature</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-large">
+                        <i class="fas fa-paper-plane"></i> Send Email
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bulk Email Tab -->
+        <div class="tab-content" id="bulk">
+            <div class="section">
+                <h2><i class="fas fa-paper-plane"></i> Bulk Email</h2>
+                <p class="subtitle">Send emails to multiple recipients at once</p>
+
+                <form id="bulkEmailForm">
+                    <div class="form-group">
+                        <label for="bulkRecipients">
+                            <i class="fas fa-users"></i> Recipients
+                            <span class="required">*</span>
+                        </label>
+                        <textarea id="bulkRecipients" rows="4" placeholder="Enter email addresses (one per line or comma-separated)&#10;example1@email.com&#10;example2@email.com&#10;example3@email.com" required></textarea>
+                        <small>Enter one email per line or separate with commas</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bulkSubject">
+                            <i class="fas fa-heading"></i> Subject
+                            <span class="required">*</span>
+                        </label>
+                        <input type="text" id="bulkSubject" placeholder="Email subject" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bulkFromCustom">
+                                <i class="fas fa-at"></i> From Email (Optional)
+                            </label>
+                            <input type="email" id="bulkFromCustom" placeholder="Use default if empty">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bulkFromName">
+                                <i class="fas fa-signature"></i> From Name (Optional)
+                            </label>
+                            <input type="text" id="bulkFromName" placeholder="Use default if empty">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bulkReplyTo">
+                            <i class="fas fa-reply"></i> Reply-To (Optional)
+                        </label>
+                        <input type="email" id="bulkReplyTo" placeholder="reply@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bulkContent">
+                            <i class="fas fa-file-alt"></i> Content
+                            <span class="required">*</span>
+                        </label>
+                        <textarea id="bulkContent" rows="10" placeholder="Email content (HTML supported)" required></textarea>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="bulkIsHtml" checked>
+                                <span>Content is HTML</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="bulkIncludeSignature">
+                                <span>Include Signature</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="bulk-preview" id="bulkPreview">
+                        <h4><i class="fas fa-eye"></i> Preview</h4>
+                        <p class="preview-info">Recipients: <strong id="recipientCount">0</strong></p>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-large">
+                        <i class="fas fa-paper-plane"></i> Send Bulk Email
+                    </button>
+                </form>
+
+                <div class="bulk-progress" id="bulkProgress" style="display: none;">
+                    <h3><i class="fas fa-spinner fa-spin"></i> Sending Progress</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p class="progress-text" id="progressText">Sending emails...</p>
+                    <div class="progress-stats">
+                        <span>Sent: <strong id="sentCount">0</strong></span>
+                        <span>Failed: <strong id="failedCount">0</strong></span>
+                        <span>Total: <strong id="totalCount">0</strong></span>
+                    </div>
+                </div>
+
+                <div class="bulk-results" id="bulkResults" style="display: none;">
+                    <h3><i class="fas fa-clipboard-check"></i> Results</h3>
+                    <div class="results-list" id="resultsList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signature Tab -->
+        <div class="tab-content" id="signature">
+            <div class="section">
+                <h2><i class="fas fa-signature"></i> Email Signature</h2>
+                <p class="subtitle">Create and manage your email signature</p>
+
+                <div class="config-section">
+                    <h3><i class="fas fa-edit"></i> Signature Editor</h3>
+                    
+                    <div class="form-group">
+                        <label for="signatureName">
+                            <i class="fas fa-user"></i> Name
+                        </label>
+                        <input type="text" id="signatureName" placeholder="Your Name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signatureTitle">
+                            <i class="fas fa-briefcase"></i> Title/Position
+                        </label>
+                        <input type="text" id="signatureTitle" placeholder="Your Title">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="signatureEmail">
+                                <i class="fas fa-envelope"></i> Email
+                            </label>
+                            <input type="email" id="signatureEmail" placeholder="your@email.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="signaturePhone">
+                                <i class="fas fa-phone"></i> Phone
+                            </label>
+                            <input type="text" id="signaturePhone" placeholder="+1 234 567 8900">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signatureWebsite">
+                            <i class="fas fa-globe"></i> Website
+                        </label>
+                        <input type="url" id="signatureWebsite" placeholder="https://yourwebsite.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signatureCompany">
+                            <i class="fas fa-building"></i> Company
+                        </label>
+                        <input type="text" id="signatureCompany" placeholder="Company Name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signatureCustom">
+                            <i class="fas fa-code"></i> Custom HTML (Optional)
+                        </label>
+                        <textarea id="signatureCustom" rows="6" placeholder="Add custom HTML for your signature..."></textarea>
+                        <small>Leave empty to use the default template, or add your own custom HTML</small>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="saveSignature">
+                            <i class="fas fa-save"></i> Save Signature
+                        </button>
+                        <button class="btn btn-secondary" id="clearSignature">
+                            <i class="fas fa-trash"></i> Clear Signature
+                        </button>
+                        <button class="btn btn-info" id="previewSignature">
+                            <i class="fas fa-eye"></i> Preview
+                        </button>
+                    </div>
+                </div>
+
+                <div class="signature-preview-box" id="signaturePreviewBox" style="display: none;">
+                    <h3><i class="fas fa-eye"></i> Signature Preview</h3>
+                    <div class="preview-content" id="signaturePreviewContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

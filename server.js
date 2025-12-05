@@ -23,6 +23,9 @@ app.use(cors({
 app.options('*', cors());
 app.use(express.json({ limit: '12mb' }));
 
+// 🌐 Serve static files from public directory
+app.use(express.static('public'));
+
 // 🔧 UPDATED RATE LIMITING - Fixed for production
 const emailLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
@@ -107,6 +110,51 @@ app.get('/health', (req, res) => {
     smtp_configured: !!(process.env.SMTP_USER && process.env.SMTP_PASS),
     api_key_configured: !!process.env.API_KEY
   });
+});
+
+// 🔧 Test SMTP configuration endpoint (no API key required)
+app.post('/api/test-smtp', async (req, res) => {
+  try {
+    const { host, port, secure, user, pass } = req.body;
+
+    if (!host || !port || !user || !pass) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required SMTP fields: host, port, user, pass'
+      });
+    }
+
+    // Create a test transporter with provided credentials
+    const testTransporter = nodemailer.createTransport({
+      host: host,
+      port: parseInt(port),
+      secure: secure === true || secure === 'true',
+      auth: {
+        user: user,
+        pass: pass
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+
+    // Verify the connection
+    await testTransporter.verify();
+
+    res.json({
+      success: true,
+      message: 'SMTP connection successful! Configuration is valid.',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('SMTP test error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'SMTP connection failed',
+      details: error.message
+    });
+  }
 });
 
 // 🧪 Manual test email endpoint
