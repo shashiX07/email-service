@@ -12,7 +12,10 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', 1);
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 app.use(cors({
   origin: true,
   credentials: true,
@@ -23,8 +26,10 @@ app.use(cors({
 app.options('*', cors());
 app.use(express.json({ limit: '12mb' }));
 
-// 🌐 Serve static files from public directory
-app.use(express.static('public'));
+// 🌐 Serve static files from public directory (for local development)
+if (process.env.NODE_ENV !== 'production') {
+  app.use(express.static('public'));
+}
 
 // 🔧 UPDATED RATE LIMITING - Fixed for production
 const emailLimiter = rateLimit({
@@ -85,8 +90,8 @@ const verifyApiKey = (req, res, next) => {
   next();
 };
 
-// Health check endpoints
-app.get('/', (req, res) => {
+// API info endpoint
+app.get('/api', (req, res) => {
   res.json({
     success: true,
     message: 'Email API Server is running on Vercel',
@@ -97,7 +102,8 @@ app.get('/', (req, res) => {
     features: {
       'contact-form': '/api/contact-form',
       'generic-email': '/api/send-email',
-      'test-email': '/api/test-email'
+      'test-email': '/api/test-email',
+      'test-smtp': '/api/test-smtp'
     }
   });
 });
@@ -391,10 +397,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.use('*', (req, res) => {
+// 404 handler for API routes only
+app.use('/api/*', (req, res) => {
   res.status(404).json({
     success: false,
-    error: 'Endpoint not found'
+    error: 'API endpoint not found'
   });
 });
 

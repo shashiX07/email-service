@@ -6,9 +6,13 @@ This is a complete email service API built with Node.js and Express that provide
 
 ## 🚀 Features
 
+- ✅ **Web Dashboard** - Modern UI to manage everything from the browser
+- ✅ **SMTP Configuration** - Configure email providers (Gmail, Outlook, Yahoo, Zoho) from frontend
+- ✅ **Bulk Email Sending** - Send emails to multiple recipients at once
+- ✅ **Email Signatures** - Create and manage custom email signatures
 - ✅ **Secure API Key Authentication**
-- ✅ **Rate Limiting** (5 emails per 15 minutes per IP)
-- ✅ **Gmail SMTP Integration**
+- ✅ **Rate Limiting** (10 emails per 10 minutes per IP)
+- ✅ **Multiple SMTP Provider Support**
 - ✅ **Beautiful HTML Email Templates**
 - ✅ **Input Validation & Sanitization**
 - ✅ **CORS Support**
@@ -19,12 +23,18 @@ This is a complete email service API built with Node.js and Express that provide
 ## 📁 Project Structure
 
 ```
-email_api/
-├── .env                 # Environment variables (sensitive data)
-├── .gitignore          # Git ignore rules
-├── package.json        # Node.js dependencies and scripts
-├── server.js           # Main server application
-└── vercel.json         # Vercel deployment configuration
+email-service/
+├── public/
+│   ├── index.html      # Web dashboard interface
+│   ├── styles.css      # Dashboard styling
+│   └── script.js       # Dashboard functionality
+├── .env                # Environment variables (sensitive data)
+├── .gitignore         # Git ignore rules
+├── .vercelignore      # Vercel ignore rules
+├── package.json       # Node.js dependencies and scripts
+├── server.js          # Main server application
+├── vercel.json        # Vercel deployment configuration
+└── README.md          # Documentation
 ```
 
 ## 🛠 Installation & Setup
