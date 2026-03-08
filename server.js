@@ -11,6 +11,16 @@ const PORT = process.env.PORT || 3001;
 // 🔧 TRUST PROXY - Fix for Vercel deployment
 app.set('trust proxy', 1);
 
+// 🔧 FIX: Normalize double slashes in URLs to prevent CORS issues
+// This must run BEFORE cors middleware
+app.use((req, res, next) => {
+  if (req.path.includes('//')) {
+    const normalizedPath = req.path.replace(/\/+/g, '/');
+    req.url = normalizedPath + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '');
+  }
+  next();
+});
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: false,
